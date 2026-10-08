@@ -1,16 +1,19 @@
-import { Star, Sparkles, Check, ShoppingCart, Info, Award } from 'lucide-react';
-import { Product, RecommendedProduct, formatINR } from '../types';
+import React from 'react';
+import { Star, Sparkles, Check, Info, Award, ExternalLink, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Product, RecommendedProduct, formatINR, getAmazonSearchUrl, getFlipkartSearchUrl } from '../types';
 
 interface ProductCardProps {
   product: Product | RecommendedProduct;
   onSelect: (product: Product) => void;
-  onAddToCart: (product: Product) => void;
+  isShortlisted?: boolean;
+  onToggleShortlist: (product: Product) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onSelect,
-  onAddToCart
+  isShortlisted = false,
+  onToggleShortlist
 }) => {
   const isRecommended = 'recommendationReason' in product;
   const recProduct = isRecommended ? (product as RecommendedProduct) : null;
@@ -19,6 +22,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const discountPercent = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+
+  const amazonUrl = getAmazonSearchUrl(product.name);
+  const flipkartUrl = getFlipkartSearchUrl(product.name);
 
   return (
     <div 
@@ -40,8 +46,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       )}
 
+      {/* Bookmark / Shortlist button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleShortlist(product);
+        }}
+        className={`absolute top-3 right-3 z-20 p-2 rounded-xl backdrop-blur-md transition shadow ${
+          isShortlisted 
+            ? 'bg-rose-500 text-white' 
+            : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+        }`}
+        title={isShortlisted ? 'Remove from Shortlist' : 'Save / Bookmark Product'}
+      >
+        {isShortlisted ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+      </button>
+
       {/* Image & Badges */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
+      <div 
+        onClick={() => onSelect(product)} 
+        className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950 cursor-pointer"
+      >
         <img 
           src={product.image} 
           alt={product.name}
@@ -50,7 +76,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
 
-        {/* Category & Stock Badges */}
+        {/* Category & Discount Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
           <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-slate-900/90 text-slate-300 backdrop-blur-md border border-slate-700/60">
             {product.category}
@@ -126,9 +152,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           ))}
         </div>
 
-        {/* Price & Action Buttons */}
-        <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3 mt-auto">
-          <div>
+        {/* Price & Action Section */}
+        <div className="pt-3 border-t border-slate-800 flex flex-col gap-3 mt-auto">
+          <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-extrabold text-white">{formatINR(product.price)}</span>
               {product.originalPrice && (
@@ -137,25 +163,41 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-emerald-400 font-medium">Free 2-day delivery</span>
-          </div>
 
-          <div className="flex items-center gap-2">
             <button
               onClick={() => onSelect(product)}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
-              title="View Specifications"
+              className="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition"
             >
-              <Info className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onAddToCart(product)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-md shadow-emerald-500/20 active:scale-95"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>Add</span>
+              <Info className="w-3.5 h-3.5" />
+              <span>Compare Specs</span>
             </button>
           </div>
+
+          {/* Buy Links (Amazon & Flipkart) - BuyHatke Style */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <a
+              href={amazonUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-xs font-semibold transition group/btn"
+              title="Check price & buy on Amazon India"
+            >
+              <span className="font-bold">Amazon</span>
+              <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+            </a>
+
+            <a
+              href={flipkartUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-300 hover:text-blue-200 text-xs font-semibold transition group/btn"
+              title="Check deals & buy on Flipkart"
+            >
+              <span className="font-bold">Flipkart</span>
+              <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+            </a>
+          </div>
+
         </div>
 
       </div>

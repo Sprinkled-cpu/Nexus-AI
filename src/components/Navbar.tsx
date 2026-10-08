@@ -1,22 +1,20 @@
 import React from 'react';
-import { Sparkles, Key, ShoppingCart, SlidersHorizontal, Bot, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Key, Bookmark } from 'lucide-react';
 import { AISettings } from '../types';
 
 interface NavbarProps {
   settings: AISettings;
   onOpenSettings: () => void;
-  cartCount: number;
-  totalProducts: number;
-  hasActiveRecommendation: boolean;
+  shortlistCount: number;
+  onOpenShortlist: () => void;
   onResetRecommendation: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   settings,
   onOpenSettings,
-  cartCount,
-  totalProducts,
-  hasActiveRecommendation,
+  shortlistCount,
+  onOpenShortlist,
   onResetRecommendation
 }) => {
   const hasKey = Boolean(settings.openaiKey || settings.geminiKey || settings.groqKey);
@@ -39,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Recommender
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">AI-Powered Smart Product Engine</p>
+            <p className="text-xs text-slate-400 hidden sm:block">AI Shopping Assistant & Deal Finder</p>
           </div>
         </div>
 
@@ -78,15 +76,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Cart Icon */}
-          <div className="relative p-2 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-300">
-            <ShoppingCart className="w-4 h-4" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow">
-                {cartCount}
+          {/* Shortlist Button (Replaces Cart) */}
+          <button
+            onClick={onOpenShortlist}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white transition text-xs font-medium"
+            title="View shortlisted products"
+          >
+            <Bookmark className="w-4 h-4 text-rose-400" />
+            <span className="hidden sm:inline">Shortlist</span>
+            {shortlistCount > 0 && (
+              <span className="ml-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow">
+                {shortlistCount}
               </span>
             )}
-          </div>
+          </button>
         </div>
 
       </div>

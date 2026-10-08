@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Navbar } from './components/Navbar';
 import { HeroSearchBar } from './components/HeroSearchBar';
 import { AiInsightsBanner } from './components/AiInsightsBanner';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailsModal } from './components/ProductDetailsModal';
+import { ShortlistModal } from './components/ShortlistModal';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { CatalogControls } from './components/CatalogControls';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
@@ -21,7 +22,7 @@ import {
   saveSettings, 
   getProductRecommendations 
 } from './services/aiRecommendationService';
-import { Sparkles, ShoppingBag, AlertTriangle, Layers } from 'lucide-react';
+import { Sparkles, BookmarkCheck, AlertTriangle, Layers } from 'lucide-react';
 
 const CATEGORIES: { id: ProductCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All Products' },
@@ -37,6 +38,8 @@ const CATEGORIES: { id: ProductCategory | 'all'; label: string }[] = [
   { id: 'accessories', label: '🔌 Accessories' },
 ];
 
+const SHORTLIST_STORAGE_KEY = 'ai_recommender_shortlist';
+
 export function App() {
   const [settings, setSettings] = useState<AISettings>(getSavedSettings);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -47,10 +50,28 @@ export function App() {
   const [recommendationResult, setRecommendationResult] = useState<AIRecommendationResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Modals & Cart
+  // Modals & Shortlist / Watchlist
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<Product[]>([]);
+  const [shortlist, setShortlist] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem(SHORTLIST_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isShortlistOpen, setIsShortlistOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHORTLIST_STORAGE_KEY, JSON.stringify(shortlist));
+    } catch (e) {
+      console.error('Failed to save shortlist', e);
+    }
+  }, [shortlist]);
+
+  const shortlistIds = useMemo(() => new Set(shortlist.map((p) => p.id)), [shortlist]);
 
   const handleSaveSettings = (newSettings: AISettings) => {
     setSettings(newSettings);
@@ -69,7 +90,6 @@ export function App() {
       setSortBy('relevance');
       setActiveCategory('all');
 
-      // Trigger subtle celebration confetti
       try {
         confetti({
           particleCount: 40,
@@ -77,8 +97,8 @@ export function App() {
           origin: { y: 0.7 },
           colors: ['#10b981', '#34d399', '#38bdf8']
         });
-      } catch (e) {
-        // Safe fallback
+      } catch {
+        // Fallback
       }
     } catch (err: any) {
       console.error('Failed to get recommendations', err);
@@ -95,17 +115,25 @@ export function App() {
     setErrorMessage(null);
   };
 
-  const handleAddToCart = (product: Product) => {
-    setCart((prev) => [...prev, product]);
-    setToastMessage(`Added "${product.name}" to cart!`);
+  const handleToggleShortlist = (product: Product) => {
+    if (shortlistIds.has(product.id)) {
+      setShortlist((prev) => prev.filter((p) => p.id !== product.id));
+      setToastMessage(`Removed "${product.name}" from Shortlist`);
+    } else {
+      setShortlist((prev) => [...prev, product]);
+      setToastMessage(`Saved "${product.name}" to Shortlist!`);
+    }
     setTimeout(() => {
       setToastMessage(null);
-    }, 3000);
+    }, 2800);
+  };
+
+  const handleRemoveFromShortlist = (productId: string) => {
+    setShortlist((prev) => prev.filter((p) => p.id !== productId));
   };
 
   // Filtered & Sorted products computation
   const displayedProducts = useMemo(() => {
-    // If AI recommendations are active
     if (recommendationResult) {
       let recs: (RecommendedProduct | Product)[] = [...recommendationResult.recommendedProducts];
 
@@ -130,7 +158,6 @@ export function App() {
       return recs;
     }
 
-    // Default catalog view
     let list = [...PRODUCTS];
 
     if (activeCategory !== 'all') {
@@ -148,11 +175,10 @@ export function App() {
     return list;
   }, [recommendationResult, activeCategory, sortBy]);
 
-  // Non-recommended remaining catalog items (for curiosity / browsing when AI is active)
   const remainingCatalog = useMemo(() => {
     if (!recommendationResult) return [];
-    const recommendedIds = new Set(recommendationResult.recommendedProducts.map(p => p.id));
-    return PRODUCTS.filter(p => !recommendedIds.has(p.id));
+    const recommendedIds = new Set(recommendationResult.recommendedProducts.map((p) => p.id));
+    return PRODUCTS.filter((p) => !recommendedIds.has(p.id));
   }, [recommendationResult]);
 
   return (
@@ -160,8 +186,8 @@ export function App() {
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500 text-slate-950 font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce">
-          <ShoppingBag className="w-4 h-4" />
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-700 text-white font-medium text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce">
+          <BookmarkCheck className="w-4 h-4 text-rose-400" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -170,9 +196,8 @@ export function App() {
       <Navbar
         settings={settings}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        cartCount={cart.length}
-        totalProducts={PRODUCTS.length}
-        hasActiveRecommendation={Boolean(recommendationResult)}
+        shortlistCount={shortlist.length}
+        onOpenShortlist={() => setIsShortlistOpen(true)}
         onResetRecommendation={handleResetRecommendation}
       />
 
@@ -235,7 +260,8 @@ export function App() {
                     key={product.id}
                     product={product}
                     onSelect={setSelectedProduct}
-                    onAddToCart={handleAddToCart}
+                    isShortlisted={shortlistIds.has(product.id)}
+                    onToggleShortlist={handleToggleShortlist}
                   />
                 ))}
               </div>
@@ -278,7 +304,8 @@ export function App() {
                   key={product.id}
                   product={product}
                   onSelect={setSelectedProduct}
-                  onAddToCart={handleAddToCart}
+                  isShortlisted={shortlistIds.has(product.id)}
+                  onToggleShortlist={handleToggleShortlist}
                 />
               ))}
             </div>
@@ -292,12 +319,12 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-slate-200">AI Engineer Assessment</span>
-            <span>— AI-Powered Product Recommendation System</span>
+            <span className="font-semibold text-slate-200">NexusAI Recommender</span>
+            <span>— AI Shopping Assistant with Amazon & Flipkart Deal Comparison</span>
           </div>
 
           <div className="flex items-center gap-4 text-slate-400">
-            <span>React • TypeScript • Tailwind CSS • OpenAI / Gemini API</span>
+            <span>Powered by OpenAI / Gemini / Heuristic Engine</span>
           </div>
         </div>
       </footer>
@@ -313,7 +340,17 @@ export function App() {
       <ProductDetailsModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
-        onAddToCart={handleAddToCart}
+        isShortlisted={selectedProduct ? shortlistIds.has(selectedProduct.id) : false}
+        onToggleShortlist={handleToggleShortlist}
+      />
+
+      <ShortlistModal
+        isOpen={isShortlistOpen}
+        onClose={() => setIsShortlistOpen(false)}
+        shortlist={shortlist}
+        onRemove={handleRemoveFromShortlist}
+        onClearAll={() => setShortlist([])}
+        onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
     </div>

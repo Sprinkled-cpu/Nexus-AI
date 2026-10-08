@@ -1,21 +1,27 @@
-import { X, Star, Check, Sparkles, ShoppingCart, Shield, Truck, RotateCcw } from 'lucide-react';
-import { Product, RecommendedProduct, formatINR } from '../types';
+import React from 'react';
+import { X, Star, Check, Sparkles, Shield, Truck, RotateCcw, ExternalLink, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Product, RecommendedProduct, formatINR, getAmazonSearchUrl, getFlipkartSearchUrl } from '../types';
 
 interface ProductDetailsModalProps {
   product: (Product | RecommendedProduct) | null;
   onClose: () => void;
-  onAddToCart: (product: Product) => void;
+  isShortlisted?: boolean;
+  onToggleShortlist: (product: Product) => void;
 }
 
 export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   product,
   onClose,
-  onAddToCart
+  isShortlisted = false,
+  onToggleShortlist
 }) => {
   if (!product) return null;
 
   const isRecommended = 'recommendationReason' in product;
   const recProduct = isRecommended ? (product as RecommendedProduct) : null;
+
+  const amazonUrl = getAmazonSearchUrl(product.name);
+  const flipkartUrl = getFlipkartSearchUrl(product.name);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -68,7 +74,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   <span className="ml-1 font-bold">{product.rating}</span>
                 </div>
                 <span className="text-slate-500">|</span>
-                <span className="text-slate-400">{product.reviewsCount} customer reviews</span>
+                <span className="text-slate-400">{product.reviewsCount.toLocaleString()} customer reviews</span>
               </div>
 
               <div className="flex items-baseline gap-3 pt-1">
@@ -79,7 +85,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   </span>
                 )}
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  In Stock
+                  Available in Stock
                 </span>
               </div>
 
@@ -102,7 +108,81 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Key Features */}
+          {/* BuyHatke-Style Store Comparison & Direct Purchase Section */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Where to Buy & Check Deals</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                    BuyHatke Style
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Compare prices and grab the best active discounts on top Indian retailers:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Amazon India Card */}
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-amber-500/30 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm text-amber-400">Amazon India</span>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded border border-amber-500/20">
+                      Prime Eligible
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Verified sellers, customer reviews, and fast Prime delivery.
+                  </p>
+                </div>
+
+                <a
+                  href={amazonUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20"
+                >
+                  <span>Buy on Amazon</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Flipkart Card */}
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-blue-500/30 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm text-blue-400">Flipkart</span>
+                    <span className="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded border border-blue-500/20">
+                      SuperCoin Offers
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Bank card EMI offers, Flipkart Assured delivery, and exchange deals.
+                  </p>
+                </div>
+
+                <a
+                  href={flipkartUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs transition shadow-md shadow-blue-500/20"
+                >
+                  <span>Buy on Flipkart</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
+              <span>💡</span>
+              <span>Pro Tip: Check both stores for bank card discounts (HDFC, ICICI, SBI) and coupon codes before purchasing.</span>
+            </div>
+          </div>
+
+          {/* Key Highlights */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Key Highlights</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -138,33 +218,35 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <RotateCcw className="w-4 h-4 text-cyan-400" />
-              <span>30-Day Returns</span>
+              <span>Hassle-Free Returns</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Shield className="w-4 h-4 text-purple-400" />
-              <span>2-Year Warranty</span>
+              <span>Genuine Warranty</span>
             </div>
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/80 flex items-center justify-end gap-3">
+        <div className="p-4 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between gap-3">
+          <button
+            onClick={() => onToggleShortlist(product)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition ${
+              isShortlisted
+                ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
+                : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            {isShortlisted ? <BookmarkCheck className="w-4 h-4 text-rose-400" /> : <Bookmark className="w-4 h-4" />}
+            <span>{isShortlisted ? 'Saved to Shortlist' : 'Save for Later'}</span>
+          </button>
+
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition"
+            className="px-5 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition"
           >
             Close
-          </button>
-          <button
-            onClick={() => {
-              onAddToCart(product);
-              onClose();
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span>Add to Cart - {formatINR(product.price)}</span>
           </button>
         </div>
 

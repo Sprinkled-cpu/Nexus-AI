@@ -63,3 +63,12 @@ export interface AISettings {
 export function formatINR(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
 }
+
+export function getAmazonSearchUrl(query: string): string {
+  return `https://www.amazon.in/s?k=${encodeURIComponent(query)}`;
+}
+
+export function getFlipkartSearchUrl(query: string): string {
+  return `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
+}
+
