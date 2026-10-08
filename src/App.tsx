@@ -25,9 +25,12 @@ import { Sparkles, ShoppingBag, AlertTriangle, Layers } from 'lucide-react';
 
 const CATEGORIES: { id: ProductCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All Products' },
+  { id: 'music', label: '🎸 Music & Instruments' },
+  { id: 'food', label: '☕ Food & Gourmet' },
   { id: 'smartphones', label: '📱 Phones' },
   { id: 'laptops', label: '💻 Laptops' },
   { id: 'audio', label: '🎧 Audio' },
+  { id: 'home', label: '🍳 Kitchen & Home' },
   { id: 'wearables', label: '⌚ Wearables' },
   { id: 'gaming', label: '🎮 Gaming' },
   { id: 'cameras', label: '📷 Cameras' },

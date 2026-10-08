@@ -50,7 +50,7 @@ export const HeroSearchBar: React.FC<HeroSearchBarProps> = ({
       </h1>
 
       <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto mb-8">
-        Enter your budget, desired features, or everyday tasks. Our AI model understands your preferences and filters our catalog with customized reasoning.
+        Ask for anything — musical instruments, gourmet food & snacks, phones, laptops, audio gear, or kitchen appliances in Indian Rupees (₹).
       </p>
 
       {/* Main Form */}
@@ -64,7 +64,7 @@ export const HeroSearchBar: React.FC<HeroSearchBarProps> = ({
             type="text"
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
-            placeholder="e.g. 'I want a phone under $500', 'best laptop for coding and video editing'..."
+            placeholder="e.g. 'acoustic guitar under ₹10,000', 'specialty coffee & snacks', 'phone under 30k'..."
             className="w-full bg-transparent text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none px-2 py-2"
             disabled={isLoading}
           />

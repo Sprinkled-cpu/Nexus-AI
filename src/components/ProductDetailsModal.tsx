@@ -1,6 +1,5 @@
-import React from 'react';
 import { X, Star, Check, Sparkles, ShoppingCart, Shield, Truck, RotateCcw } from 'lucide-react';
-import { Product, RecommendedProduct } from '../types';
+import { Product, RecommendedProduct, formatINR } from '../types';
 
 interface ProductDetailsModalProps {
   product: (Product | RecommendedProduct) | null;
@@ -73,10 +72,10 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               </div>
 
               <div className="flex items-baseline gap-3 pt-1">
-                <span className="text-2xl font-black text-white">${product.price}</span>
+                <span className="text-2xl font-black text-white">{formatINR(product.price)}</span>
                 {product.originalPrice && (
                   <span className="text-sm text-slate-500 line-through">
-                    ${product.originalPrice}
+                    {formatINR(product.originalPrice)}
                   </span>
                 )}
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
@@ -165,7 +164,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>Add to Cart - ${product.price}</span>
+            <span>Add to Cart - {formatINR(product.price)}</span>
           </button>
         </div>
 

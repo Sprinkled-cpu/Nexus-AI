@@ -1,6 +1,5 @@
-import React from 'react';
-import { Bot, Sparkles, Tag, DollarSign, Layers, Clock, RotateCcw, CheckCircle } from 'lucide-react';
-import { AIRecommendationResponse } from '../types';
+import { Bot, Sparkles, Tag, DollarSign, Layers, RotateCcw, CheckCircle } from 'lucide-react';
+import { AIRecommendationResponse, formatINR } from '../types';
 
 interface AiInsightsBannerProps {
   result: AIRecommendationResponse;
@@ -59,7 +58,7 @@ export const AiInsightsBanner: React.FC<AiInsightsBannerProps> = ({
             {extractedCriteria.budgetMax && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700 text-slate-200">
                 <DollarSign className="w-3 h-3 text-emerald-400" />
-                Max Budget: <span className="font-semibold text-emerald-400">${extractedCriteria.budgetMax}</span>
+                Max Budget: <span className="font-semibold text-emerald-400">{formatINR(extractedCriteria.budgetMax)}</span>
               </span>
             )}
 

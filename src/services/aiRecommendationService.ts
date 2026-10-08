@@ -1,4 +1,4 @@
-import { Product, RecommendedProduct, AIRecommendationResponse, AISettings, ExtractedCriteria } from '../types';
+import { Product, RecommendedProduct, AIRecommendationResponse, AISettings, ExtractedCriteria, formatINR } from '../types';
 import { PRODUCTS } from '../data/products';
 
 const STORAGE_KEY = 'ai_recommender_settings';
@@ -30,38 +30,70 @@ export function saveSettings(settings: AISettings): void {
 }
 
 /**
- * Heuristic/NLP Fallback Recommendation Engine
- * Used when no external API key is configured or when API requests encounter errors.
+ * Intelligent NLP & Semantic Fallback Recommendation Engine
+ * Supports INR (₹), 'k' multipliers, 'lakh' multipliers, and diverse categories (music, food, gadgets, home, etc.)
  */
 export function runHeuristicRecommendation(query: string, allProducts: Product[]): AIRecommendationResponse {
   const q = query.toLowerCase();
 
-  // 1. Extract budget max (e.g., "$500", "500$", "under 500", "below $1000", "< 600")
+  // 1. Extract budget max (e.g., "₹10,000", "10k", "50k", "under 1 lakh", "below 30000 rs", "< 5000 rupees")
   let budgetMax: number | undefined;
-  const budgetMatch = q.match(/(?:under|below|less than|max|up to|<|\$)\s*(\$?\d{2,5})/i) ||
-                      q.match(/(\d{2,5})\s*(?:dollars|\$)/i);
-  if (budgetMatch) {
-    const rawNum = budgetMatch[1].replace('$', '');
-    const parsed = parseInt(rawNum, 10);
-    if (!isNaN(parsed) && parsed > 10 && parsed < 20000) {
-      budgetMax = parsed;
+
+  // Check for 'lakh' (e.g. "1 lakh", "1.5 lakh")
+  const lakhMatch = q.match(/(\d+(?:\.\d+)?)\s*(?:lakh|lac)/i);
+  if (lakhMatch) {
+    budgetMax = Math.round(parseFloat(lakhMatch[1]) * 100000);
+  } else {
+    // Check for 'k' notation (e.g. "10k", "30k", "50k")
+    const kMatch = q.match(/(?:under|below|less than|within|max|up to|<|budget\s*of)\s*(\d{1,3})\s*k\b/i) ||
+                   q.match(/(\d{1,3})\s*k\s*(?:budget|inr|rs|rupees)?\b/i);
+    if (kMatch) {
+      budgetMax = parseInt(kMatch[1], 10) * 1000;
+    } else {
+      // Standard numeric with ₹, rs, rupees, or standalone number
+      const numMatch = q.match(/(?:under|below|less than|max|up to|<|within)\s*(?:₹|rs\.?|inr)?\s*(\d{3,7})/i) ||
+                       q.match(/(?:₹|rs\.?|inr)\s*(\d{3,7})/i) ||
+                       q.match(/(\d{3,7})\s*(?:rs|rupees|inr|₹)/i);
+      if (numMatch) {
+        const parsed = parseInt(numMatch[1], 10);
+        if (!isNaN(parsed) && parsed > 50 && parsed <= 5000000) {
+          budgetMax = parsed;
+        }
+      }
     }
   }
 
-  // 2. Extract targeted category
+  // 2. Extract targeted category (Music, Food, Tech, Home, etc.)
   let detectedCategory: string | undefined;
-  if (/phone|smartphone|android|iphone|mobile/i.test(q)) detectedCategory = 'smartphones';
-  else if (/laptop|macbook|notebook|pc|computer/i.test(q)) detectedCategory = 'laptops';
-  else if (/headphone|earbud|audio|sound|airpod|music/i.test(q)) detectedCategory = 'audio';
-  else if (/watch|smartwatch|fitness tracker|garmin/i.test(q)) detectedCategory = 'wearables';
-  else if (/gaming|console|ps5|playstation|switch|deck/i.test(q)) detectedCategory = 'gaming';
-  else if (/camera|vlog|photo/i.test(q)) detectedCategory = 'cameras';
-  else if (/mouse|charger|power bank|accessory|accessories/i.test(q)) detectedCategory = 'accessories';
+  
+  if (/music|guitar|piano|keyboard|ukulele|instrument|turntable|vinyl|mic|microphone|audio interface|acoustic|strings|recording|studio/i.test(q)) {
+    detectedCategory = 'music';
+  } else if (/food|coffee|chocolate|tea|snack|snacks|olive oil|ramen|edible|gourmet|grocery|dry fruit|nuts|almond|drink|beverage|eating/i.test(q)) {
+    detectedCategory = 'food';
+  } else if (/phone|smartphone|android|iphone|mobile|5g phone/i.test(q)) {
+    detectedCategory = 'smartphones';
+  } else if (/laptop|macbook|notebook|pc|computer|mac/i.test(q)) {
+    detectedCategory = 'laptops';
+  } else if (/headphone|earbud|airpod|soundcore|boat|earphone/i.test(q)) {
+    detectedCategory = 'audio';
+  } else if (/air fryer|kitchen|espresso|coffee machine|cooking|home appliance/i.test(q)) {
+    detectedCategory = 'home';
+  } else if (/watch|smartwatch|fitness tracker|garmin|amazfit/i.test(q)) {
+    detectedCategory = 'wearables';
+  } else if (/gaming|console|ps5|playstation|switch|deck|steam deck/i.test(q)) {
+    detectedCategory = 'gaming';
+  } else if (/camera|vlog|photo|mirrorless/i.test(q)) {
+    detectedCategory = 'cameras';
+  } else if (/mouse|charger|power bank|accessory|accessories/i.test(q)) {
+    detectedCategory = 'accessories';
+  }
 
   // 3. Extract desirable features
   const desirableKeywords = [
     'camera', 'battery', 'anc', 'noise cancelling', 'gaming', 'lightweight',
-    'oled', 'fast charging', 'portable', 'ergonomic', 'running', 'gps', 'coding', 'programming'
+    'oled', 'fast charging', 'portable', 'ergonomic', 'running', 'gps', 'coding',
+    'acoustic', 'touch sensitive', 'arabica', 'dark chocolate', 'healthy', 'organic',
+    'wireless', 'bluetooth', 'espresso', 'air fryer'
   ];
   const detectedFeatures = desirableKeywords.filter(k => q.includes(k));
 
@@ -73,46 +105,43 @@ export function runHeuristicRecommendation(query: string, allProducts: Product[]
     // Category match bonus
     if (detectedCategory) {
       if (product.category === detectedCategory) {
-        score += 45;
+        score += 55;
       } else {
-        score -= 25; // category mismatch penalty
+        score -= 30; // category mismatch penalty
       }
     }
 
-    // Budget check
+    // Budget check (in INR)
     if (budgetMax !== undefined) {
       if (product.price <= budgetMax) {
-        score += 35;
+        score += 40;
         const diff = budgetMax - product.price;
-        if (diff <= 50) {
-          reasons.push(`Priced at $${product.price}, landing right at the top of your $${budgetMax} budget with maximum specs`);
+        if (diff <= (budgetMax * 0.15)) {
+          reasons.push(`Priced at ${formatINR(product.price)}, fitting your ${formatINR(budgetMax)} budget with high-tier specifications`);
         } else {
-          reasons.push(`Well within your $${budgetMax} budget at $${product.price} (saving $${diff})`);
+          reasons.push(`Well within your ${formatINR(budgetMax)} budget at ${formatINR(product.price)} (saving you ${formatINR(diff)})`);
         }
       } else {
         // Over budget penalty
-        score -= 50;
+        score -= 60;
       }
     }
 
     // Keyword & Tag matching
     const productHaystack = `${product.name} ${product.brand} ${product.description} ${product.features.join(' ')} ${product.tags.join(' ')}`.toLowerCase();
     
-    // Words in user query
-    const words = q.split(/\s+/).filter(w => w.length > 2 && !['want', 'with', 'under', 'from', 'best', 'the', 'and', 'for', 'show'].includes(w));
-    let matchedKeywordsCount = 0;
+    const words = q.split(/[\s,]+/).filter(w => w.length > 2 && !['want', 'with', 'under', 'from', 'best', 'the', 'and', 'for', 'show', 'stuff', 'type', 'types'].includes(w));
     for (const word of words) {
       if (productHaystack.includes(word)) {
-        score += 8;
-        matchedKeywordsCount++;
+        score += 10;
       }
     }
 
-    // Specific detected feature matches
+    // Detected feature matches
     for (const feat of detectedFeatures) {
       if (productHaystack.includes(feat)) {
-        score += 15;
-        reasons.push(`Highlighted for its exceptional ${feat} capability`);
+        score += 18;
+        reasons.push(`Selected for top-tier ${feat} capability`);
       }
     }
 
@@ -124,13 +153,12 @@ export function runHeuristicRecommendation(query: string, allProducts: Product[]
     // Compose final tailored reason
     let finalReason = reasons.slice(0, 2).join('. ');
     if (!finalReason) {
-      finalReason = `Matches key aspects of your search with a high ${product.rating}★ user satisfaction score.`;
+      finalReason = `Matches your interest in ${product.category} with an outstanding ${product.rating}★ rating.`;
     } else {
       finalReason += '.';
     }
 
-    // Normalize score to percentage 40 - 99
-    const normalizedScore = Math.min(99, Math.max(45, Math.round(50 + score * 0.5)));
+    const normalizedScore = Math.min(99, Math.max(50, Math.round(50 + score * 0.5)));
 
     return {
       ...product,
@@ -158,10 +186,13 @@ export function runHeuristicRecommendation(query: string, allProducts: Product[]
     primaryIntent: query
   };
 
-  const categoryName = detectedCategory ? detectedCategory.replace('smartphones', 'phones') : 'items';
+  const categoryName = detectedCategory 
+    ? (detectedCategory === 'music' ? 'musical instruments & gear' : detectedCategory === 'food' ? 'gourmet food & delicacies' : detectedCategory)
+    : 'products';
+
   const summary = topResults.length > 0
-    ? `Based on your request "${query}", I analyzed our catalog and found ${topResults.length} ideal ${categoryName}${budgetMax ? ` within your $${budgetMax} budget` : ''}. Here are the top matches tailored to your specifications:`
-    : `We couldn't find an exact match for "${query}", but here are our top-rated recommendations that may fit:`;
+    ? `For your query "${query}", I analyzed our catalog and found ${topResults.length} ideal ${categoryName}${budgetMax ? ` within your ${formatINR(budgetMax)} budget` : ''}. Here are the top recommendations tailored for you:`
+    : `Here are our top-rated recommendations matching "${query}":`;
 
   return {
     query,
@@ -173,7 +204,7 @@ export function runHeuristicRecommendation(query: string, allProducts: Product[]
 }
 
 /**
- * Call OpenAI API for structured product recommendations
+ * Call OpenAI API for structured product recommendations in INR (₹)
  */
 async function callOpenAI(
   query: string, 
@@ -185,23 +216,25 @@ async function callOpenAI(
     name: p.name,
     brand: p.brand,
     category: p.category,
-    price: p.price,
+    price: `₹${p.price.toLocaleString('en-IN')}`,
     rating: p.rating,
     tags: p.tags,
     features: p.features.slice(0, 3)
   }));
 
-  const systemPrompt = `You are an expert AI product recommendation assistant for an electronics store.
+  const systemPrompt = `You are an expert AI product recommendation assistant for an online marketplace.
+All prices are in Indian Rupees (INR / ₹).
+The catalog contains diverse items: Musical instruments, Gourmet Food & coffee, Smartphones, Laptops, Audio, Kitchen, Gaming, and Wearables.
 Given the user's preference and the product catalog, select 2 to 4 products that best match their needs, budget, and desired features.
 For each recommended product, provide:
 - productId: exact id from the catalog
 - matchScore: integer between 50 and 99 indicating degree of match
-- reason: a concise 1-2 sentence explanation addressing why this matches the user's prompt (mention price, budget comparison, or specific features)
+- reason: a concise 1-2 sentence explanation addressing why this matches the user's prompt (quote prices in ₹, e.g. ₹9,490)
 - isTopPick: boolean (true for the #1 best recommendation)
 
 You MUST respond strictly with valid JSON conforming to this schema:
 {
-  "summary": "Conversational 1-2 sentence response to user greeting/preferences",
+  "summary": "Conversational 1-2 sentence response to user",
   "extractedCriteria": {
     "budgetMax": number or null,
     "category": "string or null",
@@ -212,7 +245,7 @@ You MUST respond strictly with valid JSON conforming to this schema:
     {
       "productId": "id",
       "matchScore": 95,
-      "reason": "reason text",
+      "reason": "reason quoting ₹ prices",
       "isTopPick": true
     }
   ]
@@ -249,14 +282,11 @@ User Preference:
 
   const data = await response.json();
   const rawContent = data.choices?.[0]?.message?.content;
-  if (!rawContent) {
-    throw new Error('Empty response from OpenAI');
-  }
+  if (!rawContent) throw new Error('Empty response from OpenAI');
 
   const parsed = JSON.parse(rawContent);
   const latency = Math.round(performance.now() - startTime);
 
-  // Map recommendation IDs back to full products
   const recommendedProducts: RecommendedProduct[] = [];
   if (Array.isArray(parsed.recommendations)) {
     for (const rec of parsed.recommendations) {
@@ -272,7 +302,6 @@ User Preference:
     }
   }
 
-  // Fallback if none matched
   if (recommendedProducts.length === 0) {
     return runHeuristicRecommendation(query, allProducts);
   }
@@ -300,13 +329,13 @@ async function callGemini(
     name: p.name,
     brand: p.brand,
     category: p.category,
-    price: p.price,
+    price: `₹${p.price.toLocaleString('en-IN')}`,
     rating: p.rating,
     tags: p.tags,
     features: p.features.slice(0, 3)
   }));
 
-  const prompt = `You are an expert AI product recommendation assistant.
+  const prompt = `You are an expert AI product recommendation assistant. All prices are in Indian Rupees (INR / ₹).
 Analyze this user preference: "${query}"
 Catalog:
 ${JSON.stringify(catalogSummary)}
@@ -324,7 +353,7 @@ Recommend 2-4 products from the catalog. Return STRICTLY JSON with this structur
     {
       "productId": "id",
       "matchScore": 95,
-      "reason": "Specific reason why this fits budget & specs",
+      "reason": "Specific reason why this fits budget & specs in ₹",
       "isTopPick": true
     }
   ]
@@ -386,7 +415,7 @@ Recommend 2-4 products from the catalog. Return STRICTLY JSON with this structur
 }
 
 /**
- * Call Groq API (High-speed LLaMA-3.3-70b-versatile)
+ * Call Groq API
  */
 async function callGroq(
   query: string,
@@ -398,13 +427,13 @@ async function callGroq(
     name: p.name,
     brand: p.brand,
     category: p.category,
-    price: p.price,
+    price: `₹${p.price.toLocaleString('en-IN')}`,
     rating: p.rating,
     tags: p.tags,
     features: p.features.slice(0, 3)
   }));
 
-  const systemPrompt = `You are an expert AI product recommendation assistant. Respond ONLY with valid JSON.
+  const systemPrompt = `You are an expert AI product recommendation assistant. Prices are in Indian Rupees (₹). Respond ONLY with valid JSON.
 {
   "summary": "Conversational 1-2 sentence response to user",
   "extractedCriteria": {
@@ -417,7 +446,7 @@ async function callGroq(
     {
       "productId": "id",
       "matchScore": 95,
-      "reason": "Clear concise reason",
+      "reason": "Clear concise reason quoting ₹",
       "isTopPick": true
     }
   ]
@@ -489,7 +518,6 @@ export async function getProductRecommendations(
     throw new Error('Please enter your preferences or budget.');
   }
 
-  // Check if user has an explicit API key configured
   try {
     if (settings.provider === 'openai' && settings.openaiKey) {
       return await callOpenAI(trimmed, settings.openaiKey, products);
@@ -503,7 +531,6 @@ export async function getProductRecommendations(
       return await callGroq(trimmed, settings.groqKey, products);
     }
 
-    // Auto-detect if user has any key configured even if provider isn't explicitly changed
     if (settings.openaiKey) {
       return await callOpenAI(trimmed, settings.openaiKey, products);
     }
@@ -515,14 +542,11 @@ export async function getProductRecommendations(
     }
   } catch (err: any) {
     console.warn('External AI API call failed, falling back to smart-heuristic engine:', err);
-    // Graceful fallback with error notification
     const fallback = runHeuristicRecommendation(trimmed, products);
     fallback.summary = `(API Notice: ${err.message || 'Key unavailable'}. Running via Smart AI Heuristic Engine) — ` + fallback.summary;
     return fallback;
   }
 
-  // Default instant smart NLP heuristic engine
-  // Simulate 350ms realistic AI reasoning latency for delightful UX
-  await new Promise(r => setTimeout(r, 450));
+  await new Promise(r => setTimeout(r, 380));
   return runHeuristicRecommendation(trimmed, products);
 }

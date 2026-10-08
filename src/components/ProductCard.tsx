@@ -1,6 +1,5 @@
-import React from 'react';
-import { Star, Sparkles, Check, ShoppingCart, Info, Award, Zap } from 'lucide-react';
-import { Product, RecommendedProduct } from '../types';
+import { Star, Sparkles, Check, ShoppingCart, Info, Award } from 'lucide-react';
+import { Product, RecommendedProduct, formatINR } from '../types';
 
 interface ProductCardProps {
   product: Product | RecommendedProduct;
@@ -131,10 +130,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3 mt-auto">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-extrabold text-white">${product.price}</span>
+              <span className="text-xl font-extrabold text-white">{formatINR(product.price)}</span>
               {product.originalPrice && (
                 <span className="text-xs text-slate-500 line-through">
-                  ${product.originalPrice}
+                  {formatINR(product.originalPrice)}
                 </span>
               )}
             </div>

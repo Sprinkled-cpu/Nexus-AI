@@ -2,9 +2,12 @@ export type ProductCategory =
   | 'smartphones' 
   | 'laptops' 
   | 'audio' 
+  | 'music'
+  | 'food'
   | 'wearables' 
   | 'gaming' 
   | 'cameras'
+  | 'home'
   | 'accessories';
 
 export interface Product {
@@ -12,7 +15,7 @@ export interface Product {
   name: string;
   brand: string;
   category: ProductCategory;
-  price: number;
+  price: number; // In INR (₹)
   originalPrice?: number;
   rating: number;
   reviewsCount: number;
@@ -55,4 +58,8 @@ export interface AISettings {
   openaiKey: string;
   geminiKey: string;
   groqKey: string;
+}
+
+export function formatINR(amount: number): string {
+  return `₹${amount.toLocaleString('en-IN')}`;
 }
