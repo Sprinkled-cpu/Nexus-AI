@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #020617;
+    color: #f8fafc;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+.ai-glow {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+}
+
+.ai-glow-border {
+  border-color: rgba(52, 211, 153, 0.4);
+}
